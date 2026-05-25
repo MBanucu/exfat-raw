@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "exfat-raw"
+version = "0.1.0"
+description = "Raw block-level read/write of exFAT filesystem timestamps (birth time, modification time)"
+readme = "README.md"
+license = { text = "GPL-3.0-only" }
+requires-python = ">=3.10"
+authors = [{ name = "Michael Lohmann", email = "michi@omg.lol" }]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Filesystems",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/MBanucu/exfat-raw"
+Repository = "https://github.com/MBanucu/exfat-raw"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["exfat_raw*"]
