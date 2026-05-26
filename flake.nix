@@ -23,7 +23,7 @@
       {
         packages.default = pkgs.exfat-raw;
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [ python3 ];
+          buildInputs = with pkgs; [ python3 exfat-raw ];
         };
       }
     )
