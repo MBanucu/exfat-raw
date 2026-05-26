@@ -36,5 +36,18 @@ jobs:
           }
           grep -w exfat /proc/filesystems
 
+      - name: Check os.utime capability on exFAT
+        id: utime_check
+        continue-on-error: true
+        run: python tests/check_utime.py
+
+      - name: Report os.utime capability
+        run: |
+          if [ "${{ steps.utime_check.outcome }}" = "success" ]; then
+            echo "os.utime WORKS on exFAT — all tests will run"
+          else
+            echo "os.utime DOES NOT WORK on exFAT — test_utime skipped"
+          fi
+
       - name: Run tests
         run: python -m unittest discover -s tests -v
