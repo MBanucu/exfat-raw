@@ -18,11 +18,23 @@ jobs:
       - name: Build
         run: nix build
 
-      - name: Run tests
+      - name: Set up exFAT
         run: |
-          nix develop -c bash -e -c '
-            sudo modprobe exfat 2>/dev/null && echo "exFAT module loaded" || echo "exFAT module not available"
-            grep -w exfat /proc/filesystems || true
-            python tests/check_utime.py && echo "os.utime WORKS — all tests will run" || echo "os.utime DOES NOT WORK — test_utime skipped"
-            python -m unittest discover -s tests -v
-          '
+          sudo modprobe exfat && echo "Module loaded" || echo "Module not available — tests requiring exFAT will be skipped"
+          grep -w exfat /proc/filesystems || true
+
+      - name: Check os.utime capability
+        id: utime_check
+        continue-on-error: true
+        run: nix develop -c python tests/check_utime.py
+
+      - name: Report os.utime capability
+        run: |
+          if [ "${{ steps.utime_check.outcome }}" = "success" ]; then
+            echo "os.utime WORKS on exFAT — all tests will run"
+          else
+            echo "os.utime DOES NOT WORK on exFAT — test_utime skipped"
+          fi
+
+      - name: Run tests
+        run: nix develop -c python -m unittest discover -s tests -v
