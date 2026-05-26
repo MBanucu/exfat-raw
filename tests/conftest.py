@@ -61,8 +61,11 @@ def setup_loop_device(img_path: str) -> tuple[str, str]:
     loop_dev = r.stdout.strip()
 
     mount_point = tempfile.mkdtemp(prefix='exfat_raw_')
-    r = subprocess.run(['sudo', 'mount', '-t', 'exfat', loop_dev, mount_point],
-                       capture_output=True, text=True)
+    r = subprocess.run([
+        'sudo', 'mount', '-t', 'exfat',
+        '-o', f'uid={os.getuid()},gid={os.getgid()}',
+        loop_dev, mount_point,
+    ], capture_output=True, text=True)
     if r.returncode != 0:
         subprocess.run(['sudo', 'losetup', '-d', loop_dev], capture_output=True)
         shutil.rmtree(mount_point, ignore_errors=True)
