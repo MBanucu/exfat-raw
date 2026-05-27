@@ -1,107 +1,51 @@
 """Low-level raw block I/O for exFAT filesystems.
 
-I/O goes through the **backing file** (when available) via fast
-``os.pread``/``os.pwrite`` — single syscall, no subprocess overhead.
-
-For physical devices (no backing file), falls back to ``sudo dd``
-through the raw device path.
+I/O strategies are tried in order until one succeeds. The default
+chain is: direct I/O → backing file → ``sudo dd``.
 """
 
-import os
 import struct
-import subprocess
-import tempfile
+
+from exfat_raw._strategies import (
+    IOStrategy,
+    DirectIOStrategy,
+    BackingFileStrategy,
+    DDStrategy,
+)
 
 
 class ExfatRawIO:
-    """Raw block I/O — prefers backing file; falls back to ``sudo dd``."""
+    """Raw block I/O — delegates to a chain of pluggable strategies.
 
-    def __init__(self):
-        self._backing_cache: dict[str, str | None] = {}
+    Parameters
+    ----------
+    strategies
+        Ordered list of ``IOStrategy`` instances. Defaults to
+        ``[DirectIOStrategy(), BackingFileStrategy(), DDStrategy()]``.
+    """
 
-    def _backing_file(self, device: str) -> str | None:
-        if device not in self._backing_cache:
-            dev_name = device.lstrip('/dev/')
-            for cmd in (
-                ['cat', f'/sys/block/{dev_name}/loop/backing_file'],
-                ['sudo', 'cat', f'/sys/block/{dev_name}/loop/backing_file'],
-                ['losetup', '-n', '-O', 'BACK-FILE', device],
-                ['sudo', 'losetup', '-n', '-O', 'BACK-FILE', device],
-            ):
-                try:
-                    r = subprocess.run(
-                        cmd, capture_output=True, text=True, timeout=5)
-                    if r.returncode == 0:
-                        self._backing_cache[device] = r.stdout.strip() or None
-                        break
-                except Exception:
-                    pass
-            else:
-                self._backing_cache[device] = None
-        return self._backing_cache[device]
+    def __init__(self, strategies: list[IOStrategy] | None = None):
+        self._strategies = strategies or [
+            DirectIOStrategy(),
+            BackingFileStrategy(),
+            DDStrategy(),
+        ]
 
     def clear_cache(self, device: str | None = None):
-        if device is None:
-            self._backing_cache.clear()
-        else:
-            self._backing_cache.pop(device, None)
+        for s in self._strategies:
+            s.clear_cache(device)
 
     def read(self, device: str, offset: int, size: int) -> bytes:
-        try:
-            fd = os.open(device, os.O_RDONLY)
-            try:
-                return os.pread(fd, size, offset)
-            finally:
-                os.close(fd)
-        except OSError:
-            pass
-        backing = self._backing_file(device)
-        if backing and os.access(backing, os.R_OK):
-            fd = os.open(backing, os.O_RDONLY)
-            try:
-                return os.pread(fd, size, offset)
-            finally:
-                os.close(fd)
-        try:
-            cmd = ['sudo', 'dd', f'if={device}', 'bs=1',
-                   f'skip={offset}', f'count={size}', 'status=none']
-            r = subprocess.run(cmd, capture_output=True)
-            return r.stdout
-        except FileNotFoundError:
-            return b''
+        for s in self._strategies:
+            result = s.read(device, offset, size)
+            if result is not None:
+                return result
+        return b''
 
     def write(self, device: str, offset: int, data: bytes):
-        try:
-            fd = os.open(device, os.O_WRONLY)
-            try:
-                n = os.pwrite(fd, data, offset)
-                assert n == len(data)
-                os.fsync(fd)
-            finally:
-                os.close(fd)
-            return
-        except OSError:
-            pass
-        backing = self._backing_file(device)
-        if backing and os.access(backing, os.W_OK):
-            fd = os.open(backing, os.O_WRONLY)
-            try:
-                n = os.pwrite(fd, data, offset)
-                assert n == len(data)
-                os.fsync(fd)
-            finally:
-                os.close(fd)
-            return
-        try:
-            with tempfile.NamedTemporaryFile() as tf:
-                tf.write(data)
-                tf.flush()
-                cmd = ['sudo', 'dd', f'if={tf.name}', f'of={device}',
-                       'bs=1', f'seek={offset}', f'count={len(data)}',
-                       'status=none', 'conv=fsync']
-                subprocess.run(cmd, check=True, capture_output=True)
-        except FileNotFoundError:
-            pass
+        for s in self._strategies:
+            if s.write(device, offset, data):
+                return
 
     def parse_boot(self, device: str):
         try:
