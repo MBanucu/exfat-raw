@@ -4,6 +4,13 @@ import struct
 from datetime import datetime, timezone
 
 
+def _require_aware(dt: datetime, *, name: str = "datetime") -> None:
+    if dt.tzinfo is None:
+        raise ValueError(
+            f"{name} must be timezone-aware, got naive datetime"
+        )
+
+
 def _exfat_crc16(data: bytes, crc: int = 0) -> int:
     for byte in data:
         crc ^= byte << 8
@@ -23,12 +30,12 @@ def _exfat_entry_set_crc(entries: list[bytes]) -> int:
 
 
 def _exfat_encode_time(dt):
-    utc = dt.replace(tzinfo=timezone.utc)
-    year, month, day = utc.year, utc.month, utc.day
-    hour, minute = utc.hour, utc.minute
-    total_sec = int(utc.timestamp())
+    _require_aware(dt, name="dt")
+    year, month, day = dt.year, dt.month, dt.day
+    hour, minute = dt.hour, dt.minute
+    total_sec = int(dt.timestamp())
     sec = total_sec % 60
-    ms = utc.microsecond // 1000
+    ms = dt.microsecond // 1000
     date_word = ((year - 1980) << 9) | (month << 5) | day
     time_word = (hour << 11) | (minute << 5) | (sec // 2)
     time_ms = (sec % 2) * 100 + (ms // 10)

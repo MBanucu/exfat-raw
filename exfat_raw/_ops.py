@@ -3,9 +3,14 @@
 import os
 import struct
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime
 
-from exfat_raw._pure import _exfat_encode_time, _exfat_decode_time, _exfat_entry_set_crc
+from exfat_raw._pure import (
+    _exfat_encode_time,
+    _exfat_decode_time,
+    _exfat_entry_set_crc,
+    _require_aware,
+)
 from exfat_raw._resolve import resolve_device
 
 
@@ -33,7 +38,7 @@ class ExfatRawOps:
         dw = struct.unpack_from('<H', entry, 0x0E)[0]
         tms = entry[0x16]
         dt = _exfat_decode_time(tw, dw, tms)
-        return int(dt.replace(tzinfo=timezone.utc).timestamp())
+        return int(dt.timestamp())
 
     def read_mtime_raw(self, filepath: str) -> int | None:
         try:
@@ -52,7 +57,7 @@ class ExfatRawOps:
         dw = struct.unpack_from('<H', entry, 0x0A)[0]
         tms = entry[0x14]
         dt = _exfat_decode_time(tw, dw, tms)
-        return int(dt.replace(tzinfo=timezone.utc).timestamp())
+        return int(dt.timestamp())
 
     def fix_exfat_raw(self, filepath: str, dt: datetime, dry_run: bool,
                        btime_dt: datetime | None = None,
@@ -65,9 +70,12 @@ class ExfatRawOps:
         if not boot:
             raise RuntimeError("Could not parse exFAT boot sector on " + device)
 
-        utc = dt.replace(tzinfo=timezone.utc)
+        _require_aware(dt, name="dt")
+        if btime_dt is not None:
+            _require_aware(btime_dt, name="btime_dt")
+        utc = dt
+        btime_utc = btime_dt if btime_dt is not None else utc
         label = utc.strftime("%Y-%m-%d %H:%M:%S")
-        btime_utc = btime_dt.replace(tzinfo=timezone.utc) if btime_dt is not None else utc
 
         if dry_run:
             print(f"    Would set btime via exFAT raw block write to {label} UTC")
