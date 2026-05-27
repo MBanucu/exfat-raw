@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "exfat-raw"
-version = "0.1.1"
+version = "0.1.2"
 description = "Raw block-level read/write of exFAT filesystem timestamps (birth time, modification time)"
 readme = "README.md"
 license = { text = "GPL-3.0-only" }

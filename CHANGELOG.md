@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated README with documentation for direct image file I/O and 3-tier fallback behavior
 - Refactored `ExfatRawIO` to delegate I/O to a pluggable strategy chain
 
+## [0.1.2] - 2026-05-27
+
+### Fixed
+- Correct author name and email in package metadata (Michael Banucu)
+
 ## [Unreleased]
 
 ## [0.1.0] - 2025-01-03
@@ -26,5 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
+[0.1.2]: https://github.com/MBanucu/exfat-raw/releases/tag/v0.1.2
 [0.1.1]: https://github.com/MBanucu/exfat-raw/releases/tag/v0.1.1
 [0.1.0]: https://github.com/MBanucu/exfat-raw/releases/tag/v0.1.0
