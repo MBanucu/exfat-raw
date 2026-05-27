@@ -29,7 +29,9 @@
     )
     // {
       overlays.default = final: prev: {
-        exfat-raw = final.python3.pkgs.callPackage ./nix/exfat-raw { };
+        exfat-raw = final.python3.pkgs.callPackage ./nix/exfat-raw {
+          src = final.lib.cleanSource ./.;
+        };
       };
     };
 }
