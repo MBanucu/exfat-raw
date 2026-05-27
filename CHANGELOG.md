@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Stricter datetime validation — timezone-aware datetimes are now required; naive datetimes are rejected
+
 ## [0.1.0] - 2025-01-03
 
 ### Added

@@ -45,6 +45,8 @@ boot = io.parse_boot("path/to/sdcard.img")
 chain = fs.cluster_chain(boot, "path/to/sdcard.img", boot["root_cluster"])
 ```
 
+> **Note:** All datetime parameters must be timezone-aware (e.g., `tzinfo=timezone.utc`). Naive datetimes are rejected with `ValueError`.
+
 ## Dependencies
 
 - Python ≥ 3.10 (stdlib only — `os`, `struct`, `subprocess`, `tempfile`, `pathlib`)
