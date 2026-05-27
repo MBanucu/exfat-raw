@@ -1,8 +1,8 @@
-{ lib
+{
+  lib
 , buildPythonPackage
-, fetchFromGitHub
 , setuptools
-, udisks2
+, src
 }:
 
 buildPythonPackage rec {
@@ -10,25 +10,15 @@ buildPythonPackage rec {
   version = "0.1.0";
   pyproject = true;
 
-  src = fetchFromGitHub {
-    owner = "MBanucu";
-    repo = "exfat-raw";
-    rev = "v${version}";
-    hash = "sha256-nmWMmU6GNnb2vi9ebC0brpCfyFdBICdAraOqhspesng=";
-  };
+  inherit src;
 
   nativeBuildInputs = [ setuptools ];
-
   doCheck = true;
   pythonImportsCheck = [ "exfat_raw" ];
 
   checkPhase = ''
     runHook preCheck
-    if command -v sudo >/dev/null 2>&1; then
-      python -m unittest discover -s tests -v
-    else
-      echo "sudo not available (sandbox) — skipping integration tests"
-    fi
+    python -m unittest discover -s tests -p 'test_exfat_raw_image.py' -v
     runHook postCheck
   '';
 
