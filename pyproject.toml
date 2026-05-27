@@ -9,7 +9,7 @@ description = "Raw block-level read/write of exFAT filesystem timestamps (birth 
 readme = "README.md"
 license = { text = "GPL-3.0-only" }
 requires-python = ">=3.10"
-authors = [{ name = "Michael Lohmann", email = "michi@omg.lol" }]
+authors = [{ name = "Michael Banucu", email = "michael.banucu@googlemail.com" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
