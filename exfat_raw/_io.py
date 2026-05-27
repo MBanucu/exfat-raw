@@ -47,6 +47,14 @@ class ExfatRawIO:
             self._backing_cache.pop(device, None)
 
     def read(self, device: str, offset: int, size: int) -> bytes:
+        try:
+            fd = os.open(device, os.O_RDONLY)
+            try:
+                return os.pread(fd, size, offset)
+            finally:
+                os.close(fd)
+        except OSError:
+            pass
         backing = self._backing_file(device)
         if backing and os.access(backing, os.R_OK):
             fd = os.open(backing, os.O_RDONLY)
@@ -54,12 +62,26 @@ class ExfatRawIO:
                 return os.pread(fd, size, offset)
             finally:
                 os.close(fd)
-        cmd = ['sudo', 'dd', f'if={device}', 'bs=1',
-               f'skip={offset}', f'count={size}', 'status=none']
-        r = subprocess.run(cmd, capture_output=True)
-        return r.stdout
+        try:
+            cmd = ['sudo', 'dd', f'if={device}', 'bs=1',
+                   f'skip={offset}', f'count={size}', 'status=none']
+            r = subprocess.run(cmd, capture_output=True)
+            return r.stdout
+        except FileNotFoundError:
+            return b''
 
     def write(self, device: str, offset: int, data: bytes):
+        try:
+            fd = os.open(device, os.O_WRONLY)
+            try:
+                n = os.pwrite(fd, data, offset)
+                assert n == len(data)
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+            return
+        except OSError:
+            pass
         backing = self._backing_file(device)
         if backing and os.access(backing, os.W_OK):
             fd = os.open(backing, os.O_WRONLY)
@@ -70,16 +92,22 @@ class ExfatRawIO:
             finally:
                 os.close(fd)
             return
-        with tempfile.NamedTemporaryFile() as tf:
-            tf.write(data)
-            tf.flush()
-            cmd = ['sudo', 'dd', f'if={tf.name}', f'of={device}',
-                   'bs=1', f'seek={offset}', f'count={len(data)}',
-                   'status=none', 'conv=fsync']
-            subprocess.run(cmd, check=True, capture_output=True)
+        try:
+            with tempfile.NamedTemporaryFile() as tf:
+                tf.write(data)
+                tf.flush()
+                cmd = ['sudo', 'dd', f'if={tf.name}', f'of={device}',
+                       'bs=1', f'seek={offset}', f'count={len(data)}',
+                       'status=none', 'conv=fsync']
+                subprocess.run(cmd, check=True, capture_output=True)
+        except FileNotFoundError:
+            pass
 
     def parse_boot(self, device: str):
-        data = self.read(device, 0, 512)
+        try:
+            data = self.read(device, 0, 512)
+        except Exception:
+            return None
         if len(data) < 512:
             return None
         sig = struct.unpack_from('<H', data, 510)[0]
