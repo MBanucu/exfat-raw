@@ -22,6 +22,13 @@
       in
       {
         packages.default = pkgs.exfat-raw;
+        apps.test = {
+          type = "app";
+          program = pkgs.writeShellScript "exfat-raw-test" ''
+            export PYTHONPATH="${pkgs.exfat-raw}/${pkgs.exfat-raw.pythonModule.sitePackages}:$PYTHONPATH"
+            exec python -m unittest discover -s "${self}/tests" -p 'test_*.py' -v "$@"
+          '';
+        };
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [ python3 exfat-raw ];
         };
