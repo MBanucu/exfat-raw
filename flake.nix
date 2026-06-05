@@ -22,15 +22,14 @@
       in
       {
         packages.default = pkgs.exfat-raw;
-        apps.test = {
-          type = "app";
-          program = pkgs.writeShellScript "exfat-raw-test" ''
-            export PYTHONPATH="${pkgs.exfat-raw}/${pkgs.exfat-raw.pythonModule.sitePackages}:$PYTHONPATH"
-            exec python -m unittest discover -s "${self}/tests" -p 'test_*.py' -v "$@"
-          '';
-        };
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [ python3 exfat-raw ];
+          inputsFrom = [ pkgs.exfat-raw ];
+          packages = with pkgs; [ python3 ];
+          shellHook = ''
+            echo "exfat-raw dev shell. Run tests:"
+            echo "  python -m unittest discover -s tests -p 'test_exfat_raw_image.py' -v   # sandbox-safe (no sudo)"
+            echo "  python -m unittest discover -s tests -p 'test_*.py' -v                  # full suite (needs sudo)"
+          '';
         };
       }
     )
