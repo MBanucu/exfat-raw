@@ -59,4 +59,28 @@ GNU General Public License v3.0 or later.
 
 ---
 
+## Development
+
+### Running tests
+
+**Sandbox-safe** (no `sudo`, no mount — runs a pure-Python exFAT image):
+```sh
+python -m unittest discover -s tests -p 'test_exfat_raw_image.py' -v
+```
+
+**Full suite** (requires `sudo` + loop device + exfat-fuse):
+```sh
+python -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+With Nix:
+```sh
+nix develop                   # enter dev shell
+python -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+The Nix package's `checkPhase` runs only the sandbox-safe tests (see `nix/exfat-raw/default.nix`).
+
+---
+
 Extracted from [gopro-timestamp-corrector](https://github.com/MBanucu/gopro-timestamp-corrector).
