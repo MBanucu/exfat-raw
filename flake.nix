@@ -34,6 +34,10 @@
       }
     )
     // {
+      lib.sitePackages = system:
+        let pkg = self.packages.${system}.default;
+        in "${pkg}/${pkg.pythonModule.sitePackages}";
+
       overlays.default = final: prev: {
         exfat-raw = final.python3.pkgs.callPackage ./nix/exfat-raw {
           src = final.lib.cleanSource ./.;
