@@ -133,8 +133,8 @@ class DDStrategy(IOStrategy):
     def read(self, device: str, offset: int, size: int) -> bytes | None:
         try:
             cmd = ['sudo', 'dd', f'if={device}', 'bs=1',
-                   f'skip={offset}', f'count={size}', 'status=none']
-            r = subprocess.run(cmd, capture_output=True)
+                   f'skip={offset}', f'count={size}']
+            r = subprocess.run(cmd, capture_output=True, stderr=subprocess.DEVNULL)
             return r.stdout
         except FileNotFoundError:
             return None
@@ -146,8 +146,9 @@ class DDStrategy(IOStrategy):
                 tf.flush()
                 cmd = ['sudo', 'dd', f'if={tf.name}', f'of={device}',
                        'bs=1', f'seek={offset}', f'count={len(data)}',
-                       'status=none', 'conv=fsync']
-                subprocess.run(cmd, check=True, capture_output=True)
+                       'conv=fsync']
+                subprocess.run(cmd, check=True, capture_output=True,
+                               stderr=subprocess.DEVNULL)
             return True
         except FileNotFoundError:
             return False

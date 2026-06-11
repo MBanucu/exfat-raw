@@ -4,6 +4,7 @@ I/O strategies are tried in order until one succeeds. The default
 chain is: direct I/O → backing file → ``sudo dd``.
 """
 
+import platform
 import struct
 
 from exfat_raw._strategies import (
@@ -14,6 +15,12 @@ from exfat_raw._strategies import (
 )
 
 
+def _default_strategies() -> list[IOStrategy]:
+    if platform.system() == 'Darwin':
+        return [DirectIOStrategy(), DDStrategy()]
+    return [DirectIOStrategy(), BackingFileStrategy(), DDStrategy()]
+
+
 class ExfatRawIO:
     """Raw block I/O — delegates to a chain of pluggable strategies.
 
@@ -21,15 +28,12 @@ class ExfatRawIO:
     ----------
     strategies
         Ordered list of ``IOStrategy`` instances. Defaults to
-        ``[DirectIOStrategy(), BackingFileStrategy(), DDStrategy()]``.
+        ``[DirectIOStrategy(), BackingFileStrategy(), DDStrategy()]``
+        on Linux; ``[DirectIOStrategy(), DDStrategy()]`` on macOS.
     """
 
     def __init__(self, strategies: list[IOStrategy] | None = None):
-        self._strategies = strategies or [
-            DirectIOStrategy(),
-            BackingFileStrategy(),
-            DDStrategy(),
-        ]
+        self._strategies = strategies or _default_strategies()
 
     def clear_cache(self, device: str | None = None):
         for s in self._strategies:
