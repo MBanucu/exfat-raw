@@ -123,35 +123,72 @@ class BackingFileStrategy(IOStrategy):
             self._backing_cache.pop(device, None)
 
 
+BLOCK_SIZE = 512
+
+
+def _block_align(offset: int, size: int) -> tuple[int, int, int]:
+    """Return ``(aligned_offset, total_bytes, prefix_skip)``.
+
+    Rounds *offset* down and *size* up so the resulting region is aligned
+    to ``BLOCK_SIZE``.  *prefix_skip* is the number of bytes before the
+    caller's data in the first block.
+    """
+    aligned = (offset // BLOCK_SIZE) * BLOCK_SIZE
+    end = offset + size
+    aligned_end = ((end + BLOCK_SIZE - 1) // BLOCK_SIZE) * BLOCK_SIZE
+    return aligned, aligned_end - aligned, offset - aligned
+
+
 class DDStrategy(IOStrategy):
     """Fall back to ``sudo dd`` for read/write on physical block devices.
 
     Used when the process lacks direct access to the device and must
     elevate privileges via ``sudo``.
+
+    I/O is always done in multiples of ``BLOCK_SIZE`` (512 bytes) to
+    support platforms where the device requires sector-aligned access
+    (e.g. macOS ``/dev/rdisk*`` raw devices).
     """
 
     def read(self, device: str, offset: int, size: int) -> bytes | None:
         try:
-            cmd = ['sudo', 'dd', f'if={device}', 'bs=1',
-                   f'skip={offset}', f'count={size}']
+            aligned_off, total, skip = _block_align(offset, size)
+            cmd = ['sudo', 'dd', f'if={device}', f'bs={BLOCK_SIZE}',
+                   f'skip={aligned_off // BLOCK_SIZE}',
+                   f'count={total // BLOCK_SIZE}']
             r = subprocess.run(cmd, stdout=subprocess.PIPE,
                                stderr=subprocess.DEVNULL)
             if r.returncode != 0:
                 return None
-            return r.stdout
+            return r.stdout[skip:skip + size]
         except FileNotFoundError:
             return None
 
     def write(self, device: str, offset: int, data: bytes) -> bool:
         try:
-            with tempfile.NamedTemporaryFile() as tf:
-                tf.write(data)
-                tf.flush()
-                cmd = ['sudo', 'dd', f'if={tf.name}', f'of={device}',
-                       'bs=1', f'seek={offset}', f'count={len(data)}',
-                       'conv=fsync']
-                subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
-                               stderr=subprocess.DEVNULL)
-            return True
+            aligned_off, total, skip = _block_align(offset, len(data))
+            if skip == 0 and total == len(data):
+                # Fully aligned — write directly
+                return self._write_blocks(device, aligned_off, data)
+            # Read-modify-write for unaligned writes
+            buf = self.read(device, aligned_off, total)
+            if buf is None or len(buf) < total:
+                return False
+            buf = bytearray(buf)
+            buf[skip:skip + len(data)] = data
+            return self._write_blocks(device, aligned_off, bytes(buf))
         except FileNotFoundError:
             return False
+
+    def _write_blocks(self, device: str, offset: int, data: bytes) -> bool:
+        with tempfile.NamedTemporaryFile() as tf:
+            tf.write(data)
+            tf.flush()
+            cmd = ['sudo', 'dd', f'if={tf.name}', f'of={device}',
+                   f'bs={BLOCK_SIZE}',
+                   f'seek={offset // BLOCK_SIZE}',
+                   f'count={len(data) // BLOCK_SIZE}',
+                   'conv=fsync']
+            subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
+                           stderr=subprocess.DEVNULL)
+        return True
