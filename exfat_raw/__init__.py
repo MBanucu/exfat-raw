@@ -17,7 +17,18 @@ Singletons
 ``exfat_ops`` — default ``ExfatRawOps`` instance composed from ``exfat_io`` + ``ExfatRawFilesystem``
 
 Tests should create their own ``ExfatRawIO()`` / ``ExfatRawOps()`` instances for cache isolation.
+
+Verbosity
+=========
+Set ``EXFAT_RAW_VERBOSE=1`` to enable info-level log output
+(e.g. progress messages from ``fix_exfat_raw``).
 """
+
+import logging
+import os
+
+if os.environ.get('EXFAT_RAW_VERBOSE', '').lower() not in ('', '0', 'false', 'no'):
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
 
 from exfat_raw._strategies import IOStrategy, DirectIOStrategy, BackingFileStrategy, DDStrategy
 from exfat_raw._io import ExfatRawIO
