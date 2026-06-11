@@ -4,6 +4,7 @@ point from a file path, and detect the filesystem type.
 
 import os
 import platform
+import plistlib
 import subprocess
 
 
@@ -73,10 +74,40 @@ def _resolve_device_linux(path: str) -> str | None:
         return None
 
 
+def _resolve_backing_file_darwin(dev_entry: str) -> str | None:
+    """Resolve a macOS ``/dev/disk*`` entry to its image backing file path
+    via ``hdiutil info -plist``.
+
+    Returns ``None`` when *dev_entry* is not a disk image (e.g. a physical
+    SD card reader), in which case the caller falls back to the block
+    device itself.
+    """
+    try:
+        r = subprocess.run(
+            ['hdiutil', 'info', '-plist'],
+            capture_output=True, text=True, timeout=10)
+        if r.returncode != 0:
+            return None
+        plist = plistlib.loads(r.stdout.encode())
+        for img in plist.get('images', []):
+            if not isinstance(img, dict):
+                continue
+            for ent in img.get('system-entities', []):
+                if isinstance(ent, dict) and ent.get('dev-entry') == dev_entry:
+                    return img.get('image-path')
+    except Exception:
+        pass
+    return None
+
+
 def _resolve_device_darwin(path: str) -> str | None:
     info = _df_output(path)
     if info:
-        return info[0]
+        dev = info[0]
+        backing = _resolve_backing_file_darwin(dev)
+        if backing and os.path.isfile(backing):
+            return backing
+        return dev
     return None
 
 
