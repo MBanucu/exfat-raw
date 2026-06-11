@@ -19,7 +19,7 @@ def _df_output(path: str) -> tuple[str, str, str] | None:
     try:
         if SYSTEM == 'Darwin':
             r = subprocess.run(
-                ['df', '-T', str(path)],
+                ['df', str(path)],
                 capture_output=True, text=True, timeout=5)
             if r.returncode != 0:
                 return None
@@ -29,7 +29,12 @@ def _df_output(path: str) -> tuple[str, str, str] | None:
             parts = lines[1].split()
             if len(parts) < 3:
                 return None
-            return parts[0], parts[-1], parts[1]
+            device = parts[0]
+            mount_point = parts[-1]
+            fstype = subprocess.run(
+                ['stat', '-f', '%T', str(path)],
+                capture_output=True, text=True, timeout=5).stdout.strip()
+            return device, mount_point, fstype
         else:
             r = subprocess.run(
                 ['df', '--output=fstype,target,source', str(path)],
