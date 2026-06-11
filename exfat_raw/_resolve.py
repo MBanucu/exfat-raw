@@ -30,9 +30,10 @@ def _df_output(path: str) -> tuple[str, str, str] | None:
                 return None
             device = parts[0]
             mount_point = parts[-1]
-            fstype = subprocess.run(
+            stat_r = subprocess.run(
                 ['stat', '-f', '%T', str(path)],
-                capture_output=True, text=True, timeout=5).stdout.strip()
+                capture_output=True, text=True, timeout=5)
+            fstype = stat_r.stdout.strip() if stat_r.returncode == 0 else ''
             return device, mount_point, fstype
         else:
             r = subprocess.run(
