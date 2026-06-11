@@ -7,6 +7,7 @@ via direct subprocess calls (no dependency on mount-strategy code).
 import gzip
 import os
 import platform
+import plistlib
 import shutil
 import subprocess
 import tempfile
@@ -109,27 +110,75 @@ def _teardown_loop_device_linux(loop_dev: str, mount_point: str | None = None):
 # ---------------------------------------------------------------------------
 
 def _setup_loop_device_darwin(img_path: str) -> tuple[str, str]:
+    # Try auto-mount first: attach without -nomount, parse plist output
     r = subprocess.run([
-        'hdiutil', 'attach', '-imagekey', 'diskimage-class=CRawDiskImage',
-        '-nomount', str(img_path),
+        'hdiutil', 'attach', '-plist', '-imagekey',
+        'diskimage-class=CRawDiskImage', str(img_path),
     ], capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"hdiutil attach failed: {r.stderr}")
-    disk_dev = r.stdout.strip().splitlines()[-1].split()[0]
+
+    plist = plistlib.loads(r.stdout.encode())
+    entities = plist.get('system-entities', [])
+
+    mount_dev = mount_point = None
+    for ent in entities:
+        if ent.get('mount-point'):
+            mount_dev = ent['dev-entry']
+            mount_point = ent['mount-point']
+            break
+
+    if mount_dev and mount_point:
+        return mount_dev, mount_point
+
+    # Auto-mount didn't work — detach, retry with -nomount + manual mount
+    for ent in entities:
+        dev = ent.get('dev-entry')
+        if dev:
+            subprocess.run(['hdiutil', 'detach', dev],
+                           capture_output=True, timeout=10)
+
+    r = subprocess.run([
+        'hdiutil', 'attach', '-nomount', '-plist', '-imagekey',
+        'diskimage-class=CRawDiskImage', str(img_path),
+    ], capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"hdiutil attach (-nomount) failed: {r.stderr}")
+
+    plist = plistlib.loads(r.stdout.encode())
+    entities = plist.get('system-entities', [])
+
+    disk_dev = None
+    part_devs = []
+    for ent in entities:
+        dev = ent.get('dev-entry', '')
+        if dev and not dev[-1].isdigit():
+            disk_dev = dev
+        else:
+            part_devs.append(dev)
+
+    if not disk_dev and part_devs:
+        disk_dev = part_devs[0]
+    elif not disk_dev and entities:
+        disk_dev = entities[0].get('dev-entry', '')
 
     mount_point = tempfile.mkdtemp(prefix='exfat_raw_')
-    for part_dev in [f"{disk_dev}s1", disk_dev]:
-        r = subprocess.run([
-            'sudo', 'mount', '-t', 'exfat',
-            '-o', f'uid={os.getuid()},gid={os.getgid()}',
-            part_dev, mount_point,
-        ], capture_output=True, text=True)
+    candidates = part_devs + ([disk_dev] if disk_dev else [])
+    for dev in candidates:
+        if not dev:
+            continue
+        mount_cmd = ['sudo', 'mount', '-t', 'exfat']
+        if SYSTEM != 'Darwin':
+            mount_cmd += ['-o', f'uid={os.getuid()},gid={os.getgid()}']
+        mount_cmd += [dev, mount_point]
+        r = subprocess.run(mount_cmd, capture_output=True, text=True)
         if r.returncode == 0:
-            return part_dev, mount_point
+            return dev, mount_point
 
-    subprocess.run(['hdiutil', 'detach', disk_dev], capture_output=True)
+    if disk_dev:
+        subprocess.run(['hdiutil', 'detach', disk_dev], capture_output=True)
     shutil.rmtree(mount_point, ignore_errors=True)
-    raise RuntimeError(f"mount failed for {disk_dev}")
+    raise RuntimeError(f"mount failed for disk={disk_dev} parts={part_devs}")
 
 
 def _teardown_loop_device_darwin(loop_dev: str, mount_point: str | None = None):
