@@ -1,5 +1,6 @@
 """High-level exFAT raw-block operations — read/write btime, mtime, correction."""
 
+import logging
 import os
 import struct
 import subprocess
@@ -12,6 +13,8 @@ from exfat_raw._pure import (
     _require_aware,
 )
 from exfat_raw._resolve import resolve_device
+
+logger = logging.getLogger(__name__)
 
 
 class ExfatRawOps:
@@ -78,7 +81,7 @@ class ExfatRawOps:
         label = utc.strftime("%Y-%m-%d %H:%M:%S")
 
         if dry_run:
-            print(f"    Would set btime via exFAT raw block write to {label} UTC")
+            logger.info("Would set btime via exFAT raw block write to %s UTC", label)
             return
 
         resolved = self._fs._resolve_path(filepath)
@@ -140,4 +143,4 @@ class ExfatRawOps:
                   # from userspace; utime would read stale btime and
                   # overwrite the raw-block changes.
 
-        print(f"    \u2713  btime corrected via exFAT raw block write ({label} UTC)")
+        logger.info("btime corrected via exFAT raw block write (%s UTC)", label)
