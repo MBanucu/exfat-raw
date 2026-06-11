@@ -27,7 +27,7 @@ def _df_output(path: str) -> tuple[str, str, str] | None:
             if len(lines) < 2:
                 return None
             parts = lines[1].split()
-            if len(parts) < 9:
+            if len(parts) < 3:
                 return None
             return parts[0], parts[-1], parts[1]
         else:

@@ -88,7 +88,7 @@ class DebugRawBtime(unittest.TestCase):
         r = subprocess.run(
             ['sudo', 'dd', f'of={dev}', 'bs=1', f'seek={cls._test_05_offset}',
              f'count={len(cls._test_05_pattern)}'],
-            input=cls._test_05_pattern, capture_output=True,
+            input=cls._test_05_pattern, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL)
         cls._test_05_available = r.returncode == 0
 
@@ -136,13 +136,13 @@ class DebugRawBtime(unittest.TestCase):
         subprocess.run(
             ['sudo', 'dd', f'of={dev}', 'bs=1',
              f'seek={test_offset}', f'count={len(expected)}'],
-            input=expected, check=True, capture_output=True,
+            input=expected, check=True, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL)
         subprocess.run(['sync'])
         r = subprocess.run(
             ['sudo', 'dd', f'if={dev}', 'bs=1',
              f'skip={test_offset}', f'count={len(expected)}'],
-            check=True, capture_output=True, stderr=subprocess.DEVNULL)
+            check=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         actual = r.stdout
         self.assertEqual(expected, actual,
                          f'dd write/read mismatch: expected={expected!r} actual={actual!r}')
@@ -213,7 +213,7 @@ class DebugRawBtime(unittest.TestCase):
             ['sudo', 'dd', f'if={dev}', 'bs=1',
              f'skip={self._test_05_offset}',
              f'count={len(self._test_05_pattern)}'],
-            capture_output=True, stderr=subprocess.DEVNULL)
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         if r.returncode != 0:
             err = r.stderr.decode(errors='replace').strip()[:200] if r.stderr else ''
             self.skipTest(f'dd read failed at offset {self._test_05_offset}: {err}')

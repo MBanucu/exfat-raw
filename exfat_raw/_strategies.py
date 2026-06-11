@@ -134,7 +134,8 @@ class DDStrategy(IOStrategy):
         try:
             cmd = ['sudo', 'dd', f'if={device}', 'bs=1',
                    f'skip={offset}', f'count={size}']
-            r = subprocess.run(cmd, capture_output=True, stderr=subprocess.DEVNULL)
+            r = subprocess.run(cmd, stdout=subprocess.PIPE,
+                               stderr=subprocess.DEVNULL)
             return r.stdout
         except FileNotFoundError:
             return None
@@ -147,7 +148,7 @@ class DDStrategy(IOStrategy):
                 cmd = ['sudo', 'dd', f'if={tf.name}', f'of={device}',
                        'bs=1', f'seek={offset}', f'count={len(data)}',
                        'conv=fsync']
-                subprocess.run(cmd, check=True, capture_output=True,
+                subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
                                stderr=subprocess.DEVNULL)
             return True
         except FileNotFoundError:
