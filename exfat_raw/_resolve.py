@@ -75,7 +75,12 @@ def _resolve_device_linux(path: str) -> str | None:
 
 def _resolve_device_darwin(path: str) -> str | None:
     info = _df_output(path)
-    return info[0] if info else None
+    if info:
+        dev = info[0]
+        # Use raw disk (/dev/rdisk*) for direct block I/O — bypasses
+        # macOS block-buffer cache and works while the volume is mounted.
+        return dev.replace('/dev/disk', '/dev/rdisk')
+    return None
 
 
 def resolve_device(path: str) -> str | None:

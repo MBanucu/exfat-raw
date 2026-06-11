@@ -136,6 +136,8 @@ class DDStrategy(IOStrategy):
                    f'skip={offset}', f'count={size}']
             r = subprocess.run(cmd, stdout=subprocess.PIPE,
                                stderr=subprocess.DEVNULL)
+            if r.returncode != 0:
+                return None
             return r.stdout
         except FileNotFoundError:
             return None
