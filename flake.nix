@@ -29,7 +29,7 @@
             name = "coverage-html";
             runtimeInputs = [ pkgs.python3 pkgs.python3Packages.coverage ];
             text = ''
-              coverage run -m unittest discover -s tests -p 'test_exfat_raw_image.py' -v
+              coverage run -m unittest discover -s tests -p 'test_*.py' -v
               coverage html -d htmlcov
               echo ""
               echo "Coverage report: file://$(pwd)/htmlcov/index.html"
@@ -46,9 +46,9 @@
             echo "  python -m unittest discover -s tests -p 'test_*.py' -v                  # full suite (needs sudo)"
             echo ""
             echo "Coverage:"
-            echo "  coverage run -m unittest discover -s tests -p 'test_exfat_raw_image.py' -v"
+            echo "  coverage run -m unittest discover -s tests -p 'test_*.py' -v           # full suite"
             echo "  coverage html -d htmlcov"
-            echo "  nix run .#coverage-html                                                 # same via flake app"
+            echo "  nix run .#coverage-html                                                 # same"
           '';
         };
       }
