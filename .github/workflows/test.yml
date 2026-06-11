@@ -8,10 +8,11 @@ on:
 
 jobs:
   test:
-    name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest, macos-latest]
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
@@ -22,12 +23,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install system dependencies
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq exfatprogs
 
-      - name: Load exFAT kernel module
+      - name: Load exFAT kernel module (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo modprobe exfat 2>/dev/null && echo "Module loaded" || {
             echo "Trying to install kernel modules..."

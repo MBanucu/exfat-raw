@@ -10,7 +10,12 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from conftest import decompress_sparse_image, setup_loop_device, teardown_loop_device
+from conftest import (
+    copy_sparse_image,
+    decompress_sparse_image,
+    setup_loop_device,
+    teardown_loop_device,
+)
 
 
 def _ops():
@@ -34,8 +39,7 @@ class TestFixExfatRawParams(unittest.TestCase):
         decompress_sparse_image(gz, cached)
         cls._work = Path(tempfile.mkdtemp(prefix='exfat_params_'))
         cls._img = cls._work / 'sdcard.img'
-        subprocess.run(['cp', '--sparse=always', str(cached), str(cls._img)],
-                       check=True, capture_output=True)
+        copy_sparse_image(cached, cls._img)
         cls._loop, cls._mnt = setup_loop_device(str(cls._img))
         cls.addClassCleanup(teardown_loop_device, cls._loop, cls._mnt)
         cls.addClassCleanup(shutil.rmtree, cls._work, ignore_errors=True)

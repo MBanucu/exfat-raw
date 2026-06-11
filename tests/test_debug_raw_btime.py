@@ -7,12 +7,18 @@ reports success but the data does not persist on Ubuntu CI kernels (<6.12).
 import os
 import struct
 import subprocess
+import sys
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from conftest import decompress_sparse_image, setup_loop_device, teardown_loop_device
+from conftest import (
+    copy_sparse_image,
+    decompress_sparse_image,
+    setup_loop_device,
+    teardown_loop_device,
+)
 
 
 def _raw_io():
@@ -26,6 +32,21 @@ def _raw_io():
 def _read_mtime(filepath):
     ts = os.path.getmtime(filepath)
     return datetime.fromtimestamp(ts, tz=timezone.utc)
+
+
+def _stat_birth_time(path: str) -> int | None:
+    if sys.platform == 'darwin':
+        r = subprocess.run(['stat', '-f', '%B', path],
+                           capture_output=True, text=True)
+    else:
+        r = subprocess.run(['stat', '-c', '%W', path],
+                           capture_output=True, text=True)
+    if r.returncode == 0 and r.stdout.strip():
+        try:
+            return int(r.stdout.strip())
+        except ValueError:
+            return None
+    return None
 
 
 class DebugRawBtime(unittest.TestCase):
@@ -48,8 +69,7 @@ class DebugRawBtime(unittest.TestCase):
 
         cls._work_dir = Path(tempfile.mkdtemp(prefix='exfat_debug_'))
         cls._img_path = cls._work_dir / 'sdcard.img'
-        subprocess.run(['cp', '--sparse=always', str(cached), str(cls._img_path)],
-                       check=True, capture_output=True)
+        copy_sparse_image(cached, cls._img_path)
 
         cls._loop_dev, cls._mount_point = setup_loop_device(cls._img_path)
         cls.addClassCleanup(teardown_loop_device, cls._loop_dev, cls._mount_point)
@@ -67,8 +87,9 @@ class DebugRawBtime(unittest.TestCase):
         cls._test_05_pattern = b'CLUSTER_WRITE_TEST_99'
         r = subprocess.run(
             ['sudo', 'dd', f'of={dev}', 'bs=1', f'seek={cls._test_05_offset}',
-             f'count={len(cls._test_05_pattern)}', 'status=none'],
-            input=cls._test_05_pattern, capture_output=True)
+             f'count={len(cls._test_05_pattern)}'],
+            input=cls._test_05_pattern, stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL)
         cls._test_05_available = r.returncode == 0
 
     def _first_file(self):
@@ -114,13 +135,14 @@ class DebugRawBtime(unittest.TestCase):
         expected = b'DEBUG_TEST_PATTERN_42'
         subprocess.run(
             ['sudo', 'dd', f'of={dev}', 'bs=1',
-             f'seek={test_offset}', f'count={len(expected)}', 'status=none'],
-            input=expected, check=True, capture_output=True)
+             f'seek={test_offset}', f'count={len(expected)}'],
+            input=expected, check=True, stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL)
         subprocess.run(['sync'])
         r = subprocess.run(
             ['sudo', 'dd', f'if={dev}', 'bs=1',
-             f'skip={test_offset}', f'count={len(expected)}', 'status=none'],
-            check=True, capture_output=True)
+             f'skip={test_offset}', f'count={len(expected)}'],
+            check=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         actual = r.stdout
         self.assertEqual(expected, actual,
                          f'dd write/read mismatch: expected={expected!r} actual={actual!r}')
@@ -134,16 +156,12 @@ class DebugRawBtime(unittest.TestCase):
         time_word = struct.unpack_from('<H', entry, 0x0C)[0]
         date_word = struct.unpack_from('<H', entry, 0x0E)[0]
         time_ms = entry[0x16]
-        import sys
         sys.stderr.write(f'[dbg] {first.name}: raw entry creation time_word={time_word} date_word={date_word} time_ms={time_ms}\n')
 
     def test_03_btime_readback_before_correction(self):
         first = self._first_file()
         btime_val = self._ops.read_btime_raw(str(first))
-        stat_r = subprocess.run(['stat', '-c', '%W', str(first)],
-                                capture_output=True, text=True)
-        stat_val = int(stat_r.stdout.strip()) if stat_r.returncode == 0 and stat_r.stdout.strip() else None
-        import sys
+        stat_val = _stat_birth_time(str(first))
         sys.stderr.write(f'[dbg] {first.name}: raw_btime={btime_val} stat_btime={stat_val}\n')
         self.assertIsNotNone(btime_val, 'raw btime readback returned None')
 
@@ -156,7 +174,6 @@ class DebugRawBtime(unittest.TestCase):
         target_dt = orig_mtime + delta
         target_ts = int(target_dt.replace(tzinfo=timezone.utc).timestamp())
 
-        import sys
         sys.stderr.write(f'[dbg] {first.name}: orig_mtime={orig_mtime} target_dt={target_dt} target_ts={target_ts}\n')
 
         before_btime = self._ops.read_btime_raw(str(first))
@@ -165,9 +182,7 @@ class DebugRawBtime(unittest.TestCase):
         self._ops.fix_exfat_raw(str(first), target_dt, dry_run=False)
 
         after_btime = self._ops.read_btime_raw(str(first))
-        stat_r = subprocess.run(['stat', '-c', '%W', str(first)],
-                                capture_output=True, text=True)
-        after_stat = int(stat_r.stdout.strip()) if stat_r.returncode == 0 and stat_r.stdout.strip() else None
+        after_stat = _stat_birth_time(str(first))
         sys.stderr.write(f'[dbg] {first.name}: after_raw={after_btime} after_stat={after_stat}\n')
 
         if after_btime is not None:
@@ -197,8 +212,8 @@ class DebugRawBtime(unittest.TestCase):
         r = subprocess.run(
             ['sudo', 'dd', f'if={dev}', 'bs=1',
              f'skip={self._test_05_offset}',
-             f'count={len(self._test_05_pattern)}', 'status=none'],
-            capture_output=True)
+             f'count={len(self._test_05_pattern)}'],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         if r.returncode != 0:
             err = r.stderr.decode(errors='replace').strip()[:200] if r.stderr else ''
             self.skipTest(f'dd read failed at offset {self._test_05_offset}: {err}')
@@ -220,7 +235,6 @@ class DebugRawBtime(unittest.TestCase):
         via_raw_api = self._ops.read_mtime_raw(str(first))
         self.assertIsNotNone(via_raw_api, f'{first.name}: read_mtime_raw returned None')
         diff = int(raw_mtime.timestamp()) - via_raw_api
-        import sys
         sys.stderr.write(f'[dbg] {first.name}: raw_mtime={raw_mtime} via_raw_api={via_raw_api} diff={diff}s\n')
         self.assertLessEqual(abs(diff), 2,
                              f'{first.name}: decoded mtime ({raw_mtime}) differs from '
@@ -240,11 +254,8 @@ class DebugRawBtime(unittest.TestCase):
             self._ops.fix_exfat_raw(str(fp), target_dt, dry_run=False)
             after_btime = self._ops.read_btime_raw(str(fp))
 
-            stat_r = subprocess.run(['stat', '-c', '%W', str(fp)],
-                                    capture_output=True, text=True)
-            after_stat = int(stat_r.stdout.strip()) if stat_r.returncode == 0 and stat_r.stdout.strip() else None
+            after_stat = _stat_birth_time(str(fp))
 
-            import sys
             sys.stderr.write(f'[dbg] {fp.name}: before={before_btime} after_raw={after_btime} after_stat={after_stat} target={target_ts} orig_mtime={int(orig_mtime.timestamp())}\n')
 
             if after_btime is not None:

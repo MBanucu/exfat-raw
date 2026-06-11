@@ -13,7 +13,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from conftest import decompress_sparse_image, setup_loop_device, teardown_loop_device
+from conftest import (
+    copy_sparse_image,
+    decompress_sparse_image,
+    setup_loop_device,
+    teardown_loop_device,
+)
 
 TARGET_DIR = 'DCIM/100GOPRO'
 
@@ -29,8 +34,7 @@ def main() -> int:
 
     work = Path(tempfile.mkdtemp(prefix='exfat_utime_check_'))
     img = work / 'sdcard.img'
-    subprocess.run(['cp', '--sparse=always', str(cached), str(img)],
-                   check=True, capture_output=True)
+    copy_sparse_image(cached, img)
 
     loop_dev = mount_point = None
     try:
