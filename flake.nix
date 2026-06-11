@@ -22,13 +22,33 @@
       in
       {
         packages.default = pkgs.exfat-raw;
+
+        apps.coverage-html = {
+          type = "app";
+          program = "${pkgs.writeShellApplication {
+            name = "coverage-html";
+            runtimeInputs = [ pkgs.python3 pkgs.python3Packages.coverage ];
+            text = ''
+              coverage run -m unittest discover -s tests -p 'test_exfat_raw_image.py' -v
+              coverage html -d htmlcov
+              echo ""
+              echo "Coverage report: file://$(pwd)/htmlcov/index.html"
+            '';
+          }}/bin/coverage-html";
+        };
+
         devShells.default = pkgs.mkShell {
           inputsFrom = [ pkgs.exfat-raw ];
-          packages = with pkgs; [ python3 ];
+          packages = with pkgs; [ python3 python3Packages.coverage ];
           shellHook = ''
             echo "exfat-raw dev shell. Run tests:"
             echo "  python -m unittest discover -s tests -p 'test_exfat_raw_image.py' -v   # sandbox-safe (no sudo)"
             echo "  python -m unittest discover -s tests -p 'test_*.py' -v                  # full suite (needs sudo)"
+            echo ""
+            echo "Coverage:"
+            echo "  coverage run -m unittest discover -s tests -p 'test_exfat_raw_image.py' -v"
+            echo "  coverage html -d htmlcov"
+            echo "  nix run .#coverage-html                                                 # same via flake app"
           '';
         };
       }
