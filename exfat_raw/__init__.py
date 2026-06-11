@@ -3,7 +3,10 @@
 Layers (one file per layer):
   ``_pure``        — CRC, time encoding/decoding (stateless)
   ``_resolve``     — Block device / mount point resolution
-  ``_strategies``  — Pluggable I/O strategies
+  ``_strategies``  — Pluggable I/O strategy base class & helpers
+  ``_direct_io``   — ``DirectIOStrategy``
+  ``_backing_file`` — ``BackingFileStrategy``
+  ``_dd``          — ``DDStrategy``
   ``_io``          — ``ExfatRawIO`` (strategy chain + boot parse)
   ``_fs``          — ``ExfatRawFilesystem`` (FAT, clusters, directory traversal)
   ``_ops``         — ``ExfatRawOps`` (high-level read/write of btime/mtime)
