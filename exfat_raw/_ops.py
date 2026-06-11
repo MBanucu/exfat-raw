@@ -14,6 +14,10 @@ from exfat_raw._pure import (
 from exfat_raw._resolve import resolve_device
 
 
+def _verbose() -> bool:
+    return os.environ.get('EXFAT_RAW_VERBOSE', '').lower() not in ('', '0', 'false', 'no')
+
+
 class ExfatRawOps:
     """High-level operations using ``ExfatRawIO`` + ``ExfatRawFilesystem``."""
 
@@ -78,7 +82,8 @@ class ExfatRawOps:
         label = utc.strftime("%Y-%m-%d %H:%M:%S")
 
         if dry_run:
-            print(f"    Would set btime via exFAT raw block write to {label} UTC")
+            if _verbose():
+                print(f"    Would set btime via exFAT raw block write to {label} UTC")
             return
 
         resolved = self._fs._resolve_path(filepath)
@@ -140,4 +145,5 @@ class ExfatRawOps:
                   # from userspace; utime would read stale btime and
                   # overwrite the raw-block changes.
 
-        print(f"    \u2713  btime corrected via exFAT raw block write ({label} UTC)")
+        if _verbose():
+            print(f"    \u2713  btime corrected via exFAT raw block write ({label} UTC)")
