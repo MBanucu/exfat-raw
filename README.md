@@ -1,6 +1,7 @@
 # exfat-raw
 
 [![codecov](https://codecov.io/gh/MBanucu/exfat-raw/branch/main/graph/badge.svg)](https://codecov.io/gh/MBanucu/exfat-raw)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)](https://www.python.org/)
 
 Raw block-level read/write of exFAT filesystem timestamps — birth time (btime)
 and modification time (mtime), directly from the on-disk directory entry,
