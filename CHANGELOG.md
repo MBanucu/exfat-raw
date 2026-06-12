@@ -7,8 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-12
+
+### Added
+- macOS support with platform-adaptive device/mount resolution and POSIX-compatible I/O strategies
+- Python 3.14 to supported versions
+- Nix flake `lib.sitePackages` helper for downstream flake consumers
+- Nix flake `coverage-html` app for generating HTML coverage reports
+
 ### Changed
 - Stricter datetime validation — timezone-aware datetimes are now required; naive datetimes are rejected
+- Debug/progress output migrated from `print()` to standard `logging` module, gated by `EXFAT_RAW_VERBOSE=1`
 
 ## [0.1.2] - 2026-05-27
 
@@ -34,7 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/MBanucu/exfat-raw/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/MBanucu/exfat-raw/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/MBanucu/exfat-raw/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/MBanucu/exfat-raw/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/MBanucu/exfat-raw/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/MBanucu/exfat-raw/releases/tag/v0.1.0
