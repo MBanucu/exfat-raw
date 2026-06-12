@@ -93,25 +93,16 @@ jobs:
           cat > .coveragerc << 'EOF'
           [paths]
           source =
-              /Users/runner/work/exfat-raw/exfat-raw
               /home/runner/work/exfat-raw/exfat-raw
+              /Users/runner/work/exfat-raw/exfat-raw
               .
           EOF
 
       - name: Combine coverage data across OS and Python versions
-        env:
-          COVERAGE_RCFILE: .coveragerc
-        run: |
-          coverage debug config 2>&1 | head -10
-          coverage combine --rcfile=.coveragerc coverage-*/.coverage 2>&1
-
-      - name: Show what paths remain in combined data
-        run: coverage debug data 2>&1 | head -20
+        run: coverage combine coverage-*/.coverage
 
       - name: Generate XML coverage report
-        env:
-          COVERAGE_RCFILE: .coveragerc
-        run: python -m coverage xml --rcfile=.coveragerc 2>&1
+        run: python -m coverage xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
