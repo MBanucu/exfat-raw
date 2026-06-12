@@ -61,8 +61,16 @@ jobs:
       - name: Report coverage
         run: python -m coverage report --fail-under=80 --skip-covered
 
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
+          path: .coverage
+          include-hidden-files: true
+
   coverage-report:
-    name: Coverage report
+    name: Coverage report (combined)
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -72,31 +80,28 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install Linux system dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq exfatprogs
-
-      - name: Load exFAT kernel module
-        run: |
-          sudo modprobe exfat 2>/dev/null && echo "Module loaded" || {
-            sudo apt-get install -y -qq linux-modules-extra-$(uname -r)
-            sudo modprobe exfat
-          }
-          grep -w exfat /proc/filesystems
-
-      - name: Check os.utime capability on exFAT
-        id: utime_check
-        continue-on-error: true
-        run: python tests/check_utime.py
-
       - name: Install coverage tool
         run: python -m pip install coverage
 
-      - name: Run tests with coverage
-        run: python -m coverage run -m unittest discover -s tests -v
+      - name: Download all coverage data
+        uses: actions/download-artifact@v7
+        with:
+          pattern: coverage-*
 
-      - name: Generate XML coverage report (for Codecov)
+      - name: Set up path mapping for cross-platform coverage data
+        run: |
+          cat > .coveragerc << 'EOF'
+          [paths]
+          source =
+              /home/runner/work/exfat-raw/exfat-raw
+              /Users/runner/work/exfat-raw/exfat-raw
+              .
+          EOF
+
+      - name: Combine coverage data across OS and Python versions
+        run: coverage combine coverage-*/.coverage
+
+      - name: Generate XML coverage report
         run: python -m coverage xml
 
       - name: Upload coverage to Codecov
