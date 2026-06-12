@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- Nix flake `coverage-html` app and `coverage` dev shell dependency — coverage is now viewed via Codecov
+
 ## [0.2.0] - 2026-06-12
 
 ### Added
