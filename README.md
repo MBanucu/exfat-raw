@@ -65,12 +65,6 @@ chain = fs.cluster_chain(boot, "path/to/sdcard.img", boot["root_cluster"])
 - System tools: `sudo`, `dd`, `findmnt`, `losetup` — only needed for physical block
   devices; regular image files work with stdlib alone
 
-## License
-
-GNU General Public License v3.0 or later.
-
----
-
 ## Development
 
 ### Running tests
@@ -92,6 +86,12 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
 The Nix package's `checkPhase` runs only the sandbox-safe tests (see `nix/exfat-raw/default.nix`).
+
+---
+
+## License
+
+GNU General Public License v3.0 or later.
 
 ---
 
