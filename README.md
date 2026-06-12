@@ -2,6 +2,10 @@
 
 [![codecov](https://codecov.io/gh/MBanucu/exfat-raw/branch/main/graph/badge.svg)](https://codecov.io/gh/MBanucu/exfat-raw)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)](https://www.python.org/)
+[![PyPI version](https://img.shields.io/pypi/v/exfat-raw)](https://pypi.org/project/exfat-raw/)
+[![License](https://img.shields.io/github/license/MBanucu/exfat-raw)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/MBanucu/exfat-raw/test.yml?branch=main)](https://github.com/MBanucu/exfat-raw/actions/workflows/test.yml)
+[![Downloads](https://img.shields.io/pypi/dm/exfat-raw)](https://pypi.org/project/exfat-raw/)
 
 Raw block-level read/write of exFAT filesystem timestamps — birth time (btime)
 and modification time (mtime), directly from the on-disk directory entry,
