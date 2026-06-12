@@ -3,6 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/exfat-raw)](https://pypi.org/project/exfat-raw/)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)](https://www.python.org/)
 [![License](https://img.shields.io/github/license/MBanucu/exfat-raw)](LICENSE)
+[![OS](https://img.shields.io/badge/OS-Linux%20%7C%20macOS-blue)](https://github.com/MBanucu/exfat-raw)
 
 [![CI](https://img.shields.io/github/actions/workflow/status/MBanucu/exfat-raw/test.yml?branch=main)](https://github.com/MBanucu/exfat-raw/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/MBanucu/exfat-raw/branch/main/graph/badge.svg)](https://codecov.io/gh/MBanucu/exfat-raw)
