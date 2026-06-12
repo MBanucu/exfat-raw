@@ -1,5 +1,7 @@
 # exfat-raw
 
+[![codecov](https://codecov.io/gh/MBanucu/exfat-raw/branch/main/graph/badge.svg)](https://codecov.io/gh/MBanucu/exfat-raw)
+
 Raw block-level read/write of exFAT filesystem timestamps — birth time (btime)
 and modification time (mtime), directly from the on-disk directory entry,
 bypassing the kernel driver's cache.
