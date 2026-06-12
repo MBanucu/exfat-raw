@@ -88,11 +88,21 @@ jobs:
         with:
           pattern: coverage-*
 
+      - name: Set up path mapping for cross-platform coverage data
+        run: |
+          cat > .coveragerc << 'EOF'
+          [paths]
+          source =
+              /Users/runner/work/exfat-raw/exfat-raw
+              /home/runner/work/exfat-raw/exfat-raw
+              .
+          EOF
+
       - name: Combine coverage data across OS and Python versions
-        run: coverage combine coverage-*/.coverage
+        run: coverage combine --rcfile=.coveragerc coverage-*/.coverage
 
       - name: Generate XML coverage report
-        run: python -m coverage xml
+        run: COVERAGE_RCFILE=.coveragerc python -m coverage xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
