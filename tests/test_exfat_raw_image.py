@@ -42,6 +42,41 @@ class TestBootSectorParsing(unittest.TestCase):
         boot = io.parse_boot('/nonexistent/exfat.img')
         self.assertIsNone(boot)
 
+    def test_rejects_wrong_oem_label(self):
+        boot = bytearray(512)
+        boot[510:512] = b'\x55\xAA'
+        io = ExfatRawIO()
+        self.assertIsNone(io._parse_boot_bytes(bytes(boot)))
+
+    def test_rejects_invalid_bps_shift(self):
+        boot = bytearray(512)
+        boot[3:11] = b'EXFAT   '
+        boot[510:512] = b'\x55\xAA'
+        boot[0x6C] = 13
+        io = ExfatRawIO()
+        self.assertIsNone(io._parse_boot_bytes(bytes(boot)))
+
+    def test_rejects_oversized_cluster(self):
+        boot = bytearray(512)
+        boot[3:11] = b'EXFAT   '
+        boot[510:512] = b'\x55\xAA'
+        boot[0x6C] = 9
+        boot[0x6D] = 17
+        io = ExfatRawIO()
+        self.assertIsNone(io._parse_boot_bytes(bytes(boot)))
+
+    def test_accepts_valid_boot_bytes(self):
+        boot = bytearray(512)
+        boot[3:11] = b'EXFAT   '
+        boot[510:512] = b'\x55\xAA'
+        boot[0x6C] = 9
+        boot[0x6D] = 0
+        io = ExfatRawIO()
+        result = io._parse_boot_bytes(bytes(boot))
+        self.assertIsNotNone(result)
+        self.assertEqual(result['bytes_per_sector'], 512)
+        self.assertEqual(result['sec_per_cluster'], 1)
+
 
 class TestRawBlockReadWrite(unittest.TestCase):
     """ExfatRawIO.read/write on a regular file must work without sudo."""
