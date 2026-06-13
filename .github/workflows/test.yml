@@ -52,6 +52,9 @@ jobs:
             echo "os.utime DOES NOT WORK on exFAT — test_utime skipped"
           fi
 
+      - name: Install project and dependencies
+        run: python -m pip install -e .
+
       - name: Install coverage tool
         run: python -m pip install coverage
 
