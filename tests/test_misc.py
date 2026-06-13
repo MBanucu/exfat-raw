@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 import exfat_raw
 
-from exfat_raw._backing_file import BackingFileStrategy
+from rawblock_io import BackingFileStrategy
 from exfat_raw._io import ExfatRawIO
 from exfat_raw._pure import _require_aware
 

@@ -1,17 +1,12 @@
 """Low-level raw block I/O for exFAT filesystems.
 
-I/O strategies are tried in order until one succeeds. The default
-chain is: direct I/O → backing file → ``sudo dd``.
+Delegates raw I/O to ``RawBlockIO`` from ``rawblock_io`` and adds
+exFAT-specific boot sector parsing on top.
 """
 
 import struct
 
-from exfat_raw._strategies import (
-    IOStrategy,
-    DirectIOStrategy,
-    BackingFileStrategy,
-    DDStrategy,
-)
+from rawblock_io import RawBlockIO, IOStrategy, DirectIOStrategy, BackingFileStrategy, DDStrategy
 
 
 def _default_strategies() -> list[IOStrategy]:
@@ -19,34 +14,29 @@ def _default_strategies() -> list[IOStrategy]:
 
 
 class ExfatRawIO:
-    """Raw block I/O — delegates to a chain of pluggable strategies.
+    """Raw block I/O with exFAT boot sector parsing.
+
+    Wraps a ``RawBlockIO`` strategy chain and adds ``parse_boot()``
+    for exFAT-specific validation.
 
     Parameters
     ----------
     strategies
         Ordered list of ``IOStrategy`` instances. Defaults to
-        ``[DirectIOStrategy(), BackingFileStrategy(), DDStrategy()]``
-        on Linux; ``[DirectIOStrategy(), DDStrategy()]`` on macOS.
+        ``[DirectIOStrategy(), BackingFileStrategy(), DDStrategy()]``.
     """
 
     def __init__(self, strategies: list[IOStrategy] | None = None):
-        self._strategies = strategies or _default_strategies()
-
-    def clear_cache(self, device: str | None = None):
-        for s in self._strategies:
-            s.clear_cache(device)
+        self._raw = RawBlockIO(strategies or _default_strategies())
 
     def read(self, device: str, offset: int, size: int) -> bytes:
-        for s in self._strategies:
-            result = s.read(device, offset, size)
-            if result is not None:
-                return result
-        return b''
+        return self._raw.read(device, offset, size)
 
     def write(self, device: str, offset: int, data: bytes):
-        for s in self._strategies:
-            if s.write(device, offset, data):
-                return
+        self._raw.write(device, offset, data)
+
+    def clear_cache(self, device: str | None = None):
+        self._raw.clear_cache(device)
 
     @staticmethod
     def _parse_boot_bytes(data: bytes) -> dict | None:

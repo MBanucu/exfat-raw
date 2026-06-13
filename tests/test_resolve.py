@@ -7,7 +7,7 @@ import os
 import tempfile
 import unittest
 
-from exfat_raw._resolve import _df_output
+from rawblock_io._resolve import _df_output
 
 
 SYS_PATHS = ['/tmp', '/', os.getcwd()]

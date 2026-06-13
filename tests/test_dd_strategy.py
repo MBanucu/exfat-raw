@@ -20,8 +20,7 @@ from conftest import (
     teardown_loop_device,
     teardown_raw_device,
 )
-from exfat_raw._dd import DDStrategy
-from exfat_raw._strategies import BLOCK_SIZE
+from rawblock_io import DDStrategy, BLOCK_SIZE
 
 SYSTEM = platform.system()
 
@@ -160,7 +159,7 @@ class TestDDStrategyOnLoopDevice(unittest.TestCase):
         from datetime import timezone
 
         from exfat_raw import ExfatRawFilesystem, ExfatRawIO
-        from exfat_raw._resolve import resolve_device, resolve_mount_point
+        from rawblock_io import resolve_device, resolve_mount_point
 
         file_on_disk = Path(self._mnt) / 'DCIM' / '100GOPRO'
         files = sorted(file_on_disk.glob('*'))
