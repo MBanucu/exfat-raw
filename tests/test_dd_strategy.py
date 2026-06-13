@@ -5,6 +5,7 @@ loop-device tests also requires ``sudo`` for ``losetup`` + ``mount``.
 """
 
 import os
+import platform
 import shutil
 import struct
 import subprocess
@@ -24,6 +25,8 @@ from exfat_raw import ExfatRawFilesystem, ExfatRawIO
 from exfat_raw._dd import DDStrategy
 from exfat_raw._resolve import resolve_device, resolve_mount_point
 from exfat_raw._strategies import BLOCK_SIZE
+
+SYSTEM = platform.system()
 
 
 class TestDDStrategyRead(unittest.TestCase):
@@ -116,6 +119,7 @@ class TestDDStrategyWrite(unittest.TestCase):
             os.unlink(path)
 
 
+@unittest.skipIf(SYSTEM == 'Darwin', 'loop-device DDStrategy tests require Linux')
 class TestDDStrategyOnLoopDevice(unittest.TestCase):
     """DDStrategy read/write via a mounted loop device (real block device path)."""
 
@@ -171,6 +175,7 @@ class TestDDStrategyOnLoopDevice(unittest.TestCase):
         self.assertGreater(mtime_word, 0)
 
 
+@unittest.skipIf(SYSTEM == 'Darwin', 'loop-device DDStrategy tests require Linux')
 class TestDDStrategyOnRawLoopDevice(unittest.TestCase):
     """DDStrategy write via a loop device (no mount) on a temp copy."""
 
