@@ -62,7 +62,7 @@ jobs:
         run: python -m coverage report --fail-under=80 --skip-covered
 
       - name: Upload coverage data
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
           path: .coverage
@@ -84,7 +84,7 @@ jobs:
         run: python -m pip install coverage
 
       - name: Download all coverage data
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8.0.1
         with:
           pattern: coverage-*
 
