@@ -1,5 +1,5 @@
-"""Filesystem/device resolution helpers — extract a block device and mount
-point from a file path, and detect the filesystem type.
+"""Platform-specific helpers to resolve a block device and mount point from a
+file path.
 
 Dispatches to an OS-specific submodule (``_resolve_linux`` or
 ``_resolve_darwin``) at module-load time and re-exports the public API.
@@ -54,11 +54,10 @@ def _df_output(path: str) -> tuple[str, str, str] | None:
 
 # ---------------------------------------------------------------------------
 # Platform dispatch — import the OS-specific submodule at load time and
-# alias its public API.  Each submodule must expose ``resolve_device``,
-# ``resolve_mount_point``, and ``detect_fs``.
+# alias its public API.  Each submodule must expose ``resolve_device``
+# and ``resolve_mount_point``.
 # ---------------------------------------------------------------------------
 
 _mod = importlib.import_module(f'._resolve_{SYSTEM.lower()}', __package__)
 resolve_device = _mod.resolve_device
 resolve_mount_point = _mod.resolve_mount_point
-detect_fs = _mod.detect_fs

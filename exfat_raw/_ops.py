@@ -1,9 +1,7 @@
 """High-level exFAT raw-block operations — read/write btime, mtime, correction."""
 
 import logging
-import os
 import struct
-import subprocess
 from datetime import datetime
 
 from exfat_raw._pure import (
