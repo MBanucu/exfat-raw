@@ -1,24 +1,25 @@
 """DDStrategy happy-path tests using the sdcard.img fixture.
 
 Requires passwordless ``sudo`` for ``dd``, and for the
-loop-device tests also requires ``sudo`` for ``losetup`` + ``mount``.
+loop-device tests also requires ``sudo`` for ``losetup`` + ``mount``
+(Linux) or ``hdiutil`` (macOS).
 """
 
-import os
 import platform
+import re
 import shutil
 import struct
-import subprocess
 import tempfile
 import unittest
-from datetime import timezone
 from pathlib import Path
 
 from conftest import (
     copy_sparse_image,
     decompress_sparse_image,
     setup_loop_device,
+    setup_raw_device,
     teardown_loop_device,
+    teardown_raw_device,
 )
 from exfat_raw._dd import DDStrategy
 from exfat_raw._strategies import BLOCK_SIZE
@@ -59,11 +60,10 @@ class TestDDStrategyRead(unittest.TestCase):
         self.assertEqual(len(chunk), BLOCK_SIZE * 2)
 
 
-@unittest.skipIf(SYSTEM == 'Darwin', 'loop-device DDStrategy tests require Linux')
 class TestDDStrategyWriteLoopDevice(unittest.TestCase):
     """DDStrategy write via loop device (no mount)."""
 
-    _loop: str
+    _dev: str
     _work: Path
 
     @classmethod
@@ -76,32 +76,27 @@ class TestDDStrategyWriteLoopDevice(unittest.TestCase):
         cls._work = Path(tempfile.mkdtemp(prefix='dd_write_loop_'))
         img = cls._work / 'sdcard.img'
         copy_sparse_image(cached, img)
-        r = subprocess.run(
-            ['sudo', 'losetup', '-f', '--show', str(img)],
-            capture_output=True, text=True)
-        if r.returncode != 0:
-            raise RuntimeError(f"losetup failed: {r.stderr}")
-        cls._loop = r.stdout.strip()
+        cls._dev = setup_raw_device(str(img))
         cls.addClassCleanup(cls._teardown)
 
     @classmethod
     def _teardown(cls):
-        subprocess.run(['sudo', 'losetup', '-d', cls._loop], capture_output=True)
+        teardown_raw_device(cls._dev)
         shutil.rmtree(cls._work, ignore_errors=True)
 
-    def test_write_aligned_to_loop(self):
+    def test_write_aligned(self):
         s = DDStrategy()
         data = b'\x11' * 512
-        self.assertTrue(s.write(self._loop, 0, data))
-        result = s.read(self._loop, 0, 512)
+        self.assertTrue(s.write(self._dev, 0, data))
+        result = s.read(self._dev, 0, 512)
         self.assertEqual(result, data)
 
-    def test_write_misaligned_to_loop(self):
+    def test_write_misaligned(self):
         """Misaligned write exercises the read-modify-write path."""
         s = DDStrategy()
         data = b'\x22' * 100
-        self.assertTrue(s.write(self._loop, 100, data))
-        result = s.read(self._loop, 100, 100)
+        self.assertTrue(s.write(self._dev, 100, data))
+        result = s.read(self._dev, 100, 100)
         self.assertEqual(result, data)
 
     def test_write_non_boot_area(self):
@@ -109,18 +104,25 @@ class TestDDStrategyWriteLoopDevice(unittest.TestCase):
         s = DDStrategy()
         off = 1024 * 1024
         data = b'\x33' * 512
-        self.assertTrue(s.write(self._loop, off, data))
-        result = s.read(self._loop, off, 512)
+        self.assertTrue(s.write(self._dev, off, data))
+        result = s.read(self._dev, off, 512)
         self.assertEqual(result, data)
 
 
-@unittest.skipIf(SYSTEM == 'Darwin', 'loop-device DDStrategy tests require Linux')
 class TestDDStrategyOnLoopDevice(unittest.TestCase):
-    """DDStrategy read/write via a mounted loop device (real block device path)."""
+    """DDStrategy read/write via a mounted loop device (real block device path).
+
+    On macOS the mounted partition device cannot be read via ``sudo dd``
+    (exFAT driver blocks direct I/O), so ``test_read_boot_sector`` uses
+    a raw (un-mounted) device instead.  The filesystem-content test uses
+    the mounted device via ``ExfatRawIO`` (which succeeds via ``os.pread``).
+    """
 
     _loop: str
     _mnt: str
     _img: Path
+    _raw_img: Path
+    _raw_dev: str
 
     @classmethod
     def setUpClass(cls):
@@ -130,15 +132,26 @@ class TestDDStrategyOnLoopDevice(unittest.TestCase):
         cached = Path(__file__).parent / 'sdcard.img'
         decompress_sparse_image(gz, cached)
         cls._work = Path(tempfile.mkdtemp(prefix='dd_loop_'))
+
+        # Mounted device
         cls._img = cls._work / 'sdcard.img'
         copy_sparse_image(cached, cls._img)
         cls._loop, cls._mnt = setup_loop_device(str(cls._img))
+
+        # Raw (un-mounted) device for sudo dd tests.
+        # macOS exFAT driver blocks direct I/O to mounted devices,
+        # so we use a separate image copy attached via hdiutil -nomount.
+        cls._raw_img = cls._work / 'sdcard_raw.img'
+        copy_sparse_image(cached, cls._raw_img)
+        cls._raw_dev = setup_raw_device(str(cls._raw_img))
+
+        cls.addClassCleanup(teardown_raw_device, cls._raw_dev)
         cls.addClassCleanup(teardown_loop_device, cls._loop, cls._mnt)
         cls.addClassCleanup(shutil.rmtree, cls._work, ignore_errors=True)
 
     def test_read_boot_sector_from_loop_device(self):
         s = DDStrategy()
-        data = s.read(self._loop, 0, 512)
+        data = s.read(self._raw_dev, 0, 512)
         self.assertIsNotNone(data)
         self.assertEqual(len(data), 512)
         sig = struct.unpack_from('<H', data, 510)[0]
@@ -150,7 +163,6 @@ class TestDDStrategyOnLoopDevice(unittest.TestCase):
         from exfat_raw import ExfatRawFilesystem, ExfatRawIO
         from exfat_raw._resolve import resolve_device, resolve_mount_point
 
-        s = DDStrategy()
         file_on_disk = Path(self._mnt) / 'DCIM' / '100GOPRO'
         files = sorted(file_on_disk.glob('*'))
         self.assertGreater(len(files), 0)

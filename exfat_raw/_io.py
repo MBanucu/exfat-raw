@@ -4,7 +4,6 @@ I/O strategies are tried in order until one succeeds. The default
 chain is: direct I/O → backing file → ``sudo dd``.
 """
 
-import platform
 import struct
 
 from exfat_raw._strategies import (
@@ -16,8 +15,6 @@ from exfat_raw._strategies import (
 
 
 def _default_strategies() -> list[IOStrategy]:
-    if platform.system() == 'Darwin':
-        return [DirectIOStrategy(), DDStrategy()]
     return [DirectIOStrategy(), BackingFileStrategy(), DDStrategy()]
 
 
