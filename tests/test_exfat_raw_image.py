@@ -65,12 +65,23 @@ class TestBootSectorParsing(unittest.TestCase):
         io = ExfatRawIO()
         self.assertIsNone(io._parse_boot_bytes(bytes(boot)))
 
+    def test_rejects_unsupported_version(self):
+        boot = bytearray(512)
+        boot[3:11] = b'EXFAT   '
+        boot[510:512] = b'\x55\xAA'
+        boot[0x6C] = 9
+        boot[0x6D] = 0
+        struct.pack_into('<H', boot, 0x68, 0x0200)
+        io = ExfatRawIO()
+        self.assertIsNone(io._parse_boot_bytes(bytes(boot)))
+
     def test_accepts_valid_boot_bytes(self):
         boot = bytearray(512)
         boot[3:11] = b'EXFAT   '
         boot[510:512] = b'\x55\xAA'
         boot[0x6C] = 9
         boot[0x6D] = 0
+        struct.pack_into('<H', boot, 0x68, 0x0100)
         io = ExfatRawIO()
         result = io._parse_boot_bytes(bytes(boot))
         self.assertIsNotNone(result)
