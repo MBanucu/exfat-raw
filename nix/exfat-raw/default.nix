@@ -2,19 +2,21 @@
   lib
 , buildPythonPackage
 , setuptools
-, fetchPypi
+, fetchurl
 , src
-}:
+}
 
 let
   rawblock-io = buildPythonPackage rec {
     pname = "rawblock-io";
     version = "0.1.0";
-    src = fetchPypi {
-      pname = "rawblock-io";
-      version = "0.1.0";
+    src = fetchurl {
+      url = "https://files.pythonhosted.org/packages/source/r/rawblock-io/rawblock_io-${version}.tar.gz";
       sha256 = "a68b5a019d4d29d92e39504d6f057660d2d62307d7a7d429d03647ce42b1c7e1";
     };
+    pyproject = true;
+    nativeBuildInputs = [ setuptools ];
+  };
     pyproject = true;
     nativeBuildInputs = [ setuptools ];
   };
