@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `BackingFileStrategy` (loop-device backing file I/O) now works on macOS, giving macOS the same 3-tier I/O fallback chain as Linux
+
 ### Removed
 - Nix flake `coverage-html` app and `coverage` dev shell dependency — coverage is now viewed via Codecov
 
