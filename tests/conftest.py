@@ -1,13 +1,15 @@
 """Shared test utilities for exfat-raw tests.
 
-Provides sparse-image decompression and loop-device lifecycle
-via direct subprocess calls (no dependency on mount-strategy code).
+Provides sparse-image decompression, loop-device lifecycle,
+and raw-device lifecycle via direct subprocess calls
+(no dependency on mount-strategy code).
 """
 
 import gzip
 import os
 import platform
 import plistlib
+import re
 import shutil
 import subprocess
 import tempfile
@@ -18,6 +20,7 @@ from pathlib import Path
 KNOWN_IMG_SIZE = 8531738624  # apparent (uncompressed) size of sdcard.img
 
 SYSTEM = platform.system()
+_PART_RE = re.compile(r'disk\d+s\d+')
 
 
 def decompress_sparse_image(gz_path: Path, dest_path: Path) -> Path:
@@ -121,15 +124,11 @@ def _setup_loop_device_darwin(img_path: str) -> tuple[str, str]:
     plist = plistlib.loads(r.stdout.encode())
     entities = plist.get('system-entities', [])
 
-    mount_dev = mount_point = None
     for ent in entities:
         if ent.get('mount-point'):
-            mount_dev = ent['dev-entry']
-            mount_point = ent['mount-point']
-            break
-
-    if mount_dev and mount_point:
-        return mount_dev, mount_point
+            ent_dev = ent.get('dev-entry')
+            if ent_dev:
+                return ent_dev, ent['mount-point']
 
     # Auto-mount didn't work — detach, retry with -nomount + manual mount
     for ent in entities:
@@ -148,37 +147,31 @@ def _setup_loop_device_darwin(img_path: str) -> tuple[str, str]:
     plist = plistlib.loads(r.stdout.encode())
     entities = plist.get('system-entities', [])
 
-    disk_dev = None
-    part_devs = []
+    mount_point = tempfile.mkdtemp(prefix='exfat_raw_')
     for ent in entities:
         dev = ent.get('dev-entry', '')
-        if dev and not dev[-1].isdigit():
-            disk_dev = dev
-        else:
-            part_devs.append(dev)
+        if _PART_RE.search(dev):
+            r = subprocess.run(
+                ['sudo', 'mount', '-t', 'exfat', dev, mount_point],
+                capture_output=True, text=True)
+            if r.returncode == 0:
+                return dev, mount_point
 
-    if not disk_dev and part_devs:
-        disk_dev = part_devs[0]
-    elif not disk_dev and entities:
-        disk_dev = entities[0].get('dev-entry', '')
+    # No partition mounted — try the whole-disk device
+    for ent in entities:
+        dev = ent.get('dev-entry', '')
+        if dev and not _PART_RE.search(dev):
+            r = subprocess.run(
+                ['sudo', 'mount', '-t', 'exfat', dev, mount_point],
+                capture_output=True, text=True)
+            if r.returncode == 0:
+                return dev, mount_point
 
-    mount_point = tempfile.mkdtemp(prefix='exfat_raw_')
-    candidates = part_devs + ([disk_dev] if disk_dev else [])
-    for dev in candidates:
-        if not dev:
-            continue
-        mount_cmd = ['sudo', 'mount', '-t', 'exfat']
-        if SYSTEM != 'Darwin':
-            mount_cmd += ['-o', f'uid={os.getuid()},gid={os.getgid()}']
-        mount_cmd += [dev, mount_point]
-        r = subprocess.run(mount_cmd, capture_output=True, text=True)
-        if r.returncode == 0:
-            return dev, mount_point
-
+    disk_dev = next((ent.get('dev-entry', '') for ent in entities if ent.get('dev-entry')), None)
     if disk_dev:
         subprocess.run(['hdiutil', 'detach', disk_dev], capture_output=True)
     shutil.rmtree(mount_point, ignore_errors=True)
-    raise RuntimeError(f"mount failed for disk={disk_dev} parts={part_devs}")
+    raise RuntimeError(f"mount failed for {entities}")
 
 
 def _teardown_loop_device_darwin(loop_dev: str, mount_point: str | None = None):
@@ -214,3 +207,60 @@ def teardown_loop_device(loop_dev: str, mount_point: str | None = None):
         _teardown_loop_device_darwin(loop_dev, mount_point)
     else:
         _teardown_loop_device_linux(loop_dev, mount_point)
+
+
+# ---------------------------------------------------------------------------
+# Raw (un-mounted) device attach/detach — for DDStrategy write tests
+# ---------------------------------------------------------------------------
+
+def _setup_raw_device_linux(img_path: str) -> str:
+    r = subprocess.run(['sudo', 'losetup', '-f', '--show', img_path],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"losetup failed: {r.stderr}")
+    return r.stdout.strip()
+
+
+def _teardown_raw_device_linux(dev: str):
+    subprocess.run(['sudo', 'losetup', '-d', dev], capture_output=True)
+
+
+def _setup_raw_device_darwin(img_path: str) -> str:
+    r = subprocess.run([
+        'hdiutil', 'attach', '-nomount', '-plist', '-imagekey',
+        'diskimage-class=CRawDiskImage', img_path,
+    ], capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"hdiutil attach (-nomount) failed: {r.stderr}")
+    plist = plistlib.loads(r.stdout.encode())
+    entities = plist.get('system-entities', [])
+    # Return the first whole-disk entry (no slice suffix)
+    for ent in entities:
+        dev = ent.get('dev-entry', '')
+        if dev and not _PART_RE.search(dev):
+            return dev
+    if entities:
+        return entities[0].get('dev-entry', '')
+    raise RuntimeError("hdiutil attach returned no devices")
+
+
+def _teardown_raw_device_darwin(dev: str):
+    subprocess.run(['hdiutil', 'detach', dev], capture_output=True, timeout=10)
+
+
+def setup_raw_device(img_path: str) -> str:
+    """Attach *img_path* as a raw block device without mounting.
+    Returns the device path (e.g. ``/dev/loop0`` or ``/dev/disk5``).
+    Raises RuntimeError on failure.
+    """
+    if SYSTEM == 'Darwin':
+        return _setup_raw_device_darwin(img_path)
+    return _setup_raw_device_linux(img_path)
+
+
+def teardown_raw_device(dev: str):
+    """Detach a raw block device."""
+    if SYSTEM == 'Darwin':
+        _teardown_raw_device_darwin(dev)
+    else:
+        _teardown_raw_device_linux(dev)
