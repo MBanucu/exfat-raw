@@ -48,18 +48,24 @@ class ExfatRawIO:
             if s.write(device, offset, data):
                 return
 
-    def parse_boot(self, device: str):
-        try:
-            data = self.read(device, 0, 512)
-        except Exception:
-            return None
+    @staticmethod
+    def _parse_boot_bytes(data: bytes) -> dict | None:
         if len(data) < 512:
             return None
         sig = struct.unpack_from('<H', data, 510)[0]
         if sig != 0xAA55:
             return None
-        bps = 1 << data[0x6C]
-        spc = 1 << data[0x6D]
+        oem = data[3:11]
+        if oem != b'EXFAT   ':
+            return None
+        bps_shift = data[0x6C]
+        if bps_shift not in (9, 10, 11, 12):
+            return None
+        bps = 1 << bps_shift
+        spc_shift = data[0x6D]
+        if bps_shift + spc_shift > 25:
+            return None
+        spc = 1 << spc_shift
         return {
             'bytes_per_sector': bps,
             'sec_per_cluster': spc,
@@ -68,3 +74,10 @@ class ExfatRawIO:
             'cluster_heap_offset': struct.unpack_from('<I', data, 0x58)[0] * bps,
             'root_cluster': struct.unpack_from('<I', data, 0x60)[0],
         }
+
+    def parse_boot(self, device: str):
+        try:
+            data = self.read(device, 0, 512)
+        except Exception:
+            return None
+        return self._parse_boot_bytes(data)
