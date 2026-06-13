@@ -6,6 +6,7 @@ loop-device tests also requires ``sudo`` for ``losetup`` + ``mount``
 """
 
 import platform
+import re
 import shutil
 import struct
 import tempfile
@@ -109,9 +110,16 @@ class TestDDStrategyWriteLoopDevice(unittest.TestCase):
 
 
 class TestDDStrategyOnLoopDevice(unittest.TestCase):
-    """DDStrategy read/write via a mounted loop device (real block device path)."""
+    """DDStrategy read/write via a mounted loop device (real block device path).
+
+    On macOS the mounted partition device cannot be read via ``sudo dd``
+    (exFAT driver blocks direct I/O), so ``test_read_boot_sector`` uses
+    a raw (un-mounted) device instead.  The filesystem-content test uses
+    the mounted device via ``ExfatRawIO`` (which succeeds via ``os.pread``).
+    """
 
     _loop: str
+    _raw_dev: str
     _mnt: str
     _img: Path
 
@@ -126,12 +134,20 @@ class TestDDStrategyOnLoopDevice(unittest.TestCase):
         cls._img = cls._work / 'sdcard.img'
         copy_sparse_image(cached, cls._img)
         cls._loop, cls._mnt = setup_loop_device(str(cls._img))
+        # On macOS the mounted partition device can't be read via sudo dd
+        # (exFAT driver blocks direct I/O).  Derive the parent whole-disk
+        # device for raw-block tests.  On Linux the loop device itself is
+        # already a whole-disk device.
+        if SYSTEM == 'Darwin':
+            cls._raw_dev = re.sub(r's\d+$', '', cls._loop)
+        else:
+            cls._raw_dev = cls._loop
         cls.addClassCleanup(teardown_loop_device, cls._loop, cls._mnt)
         cls.addClassCleanup(shutil.rmtree, cls._work, ignore_errors=True)
 
     def test_read_boot_sector_from_loop_device(self):
         s = DDStrategy()
-        data = s.read(self._loop, 0, 512)
+        data = s.read(self._raw_dev, 0, 512)
         self.assertIsNotNone(data)
         self.assertEqual(len(data), 512)
         sig = struct.unpack_from('<H', data, 510)[0]
@@ -143,7 +159,6 @@ class TestDDStrategyOnLoopDevice(unittest.TestCase):
         from exfat_raw import ExfatRawFilesystem, ExfatRawIO
         from exfat_raw._resolve import resolve_device, resolve_mount_point
 
-        s = DDStrategy()
         file_on_disk = Path(self._mnt) / 'DCIM' / '100GOPRO'
         files = sorted(file_on_disk.glob('*'))
         self.assertGreater(len(files), 0)
