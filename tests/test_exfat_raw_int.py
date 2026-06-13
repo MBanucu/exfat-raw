@@ -4,7 +4,6 @@ Requires loop device setup (sudo + FUSE).
 """
 
 import os
-import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone

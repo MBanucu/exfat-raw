@@ -6,7 +6,6 @@ loop-device tests also requires ``sudo`` for ``losetup`` + ``mount``
 """
 
 import platform
-import re
 import shutil
 import struct
 import tempfile

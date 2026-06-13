@@ -4,7 +4,6 @@ Requires loop device setup (sudo + FUSE).  Uses the sdcard.img fixture.
 """
 
 import shutil
-import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timezone

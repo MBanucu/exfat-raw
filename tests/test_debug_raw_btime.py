@@ -107,10 +107,6 @@ class DebugRawBtime(unittest.TestCase):
         from exfat_raw._resolve import resolve_device
         return resolve_device(str(self._mount_point))
 
-    def _resolve_mount(self):
-        from exfat_raw._resolve import resolve_mount_point
-        return resolve_mount_point(str(self._mount_point))
-
     @property
     def _io(self):
         if not hasattr(self, '__io'):

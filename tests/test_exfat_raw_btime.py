@@ -1,6 +1,5 @@
 """Integration test for exFAT raw block btime strategy."""
 import shutil
-import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timezone
