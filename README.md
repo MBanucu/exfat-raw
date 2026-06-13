@@ -92,7 +92,3 @@ The Nix package's `checkPhase` runs only the sandbox-safe tests (see `nix/exfat-
 ## License
 
 GNU General Public License v3.0 or later.
-
----
-
-Extracted from [gopro-timestamp-corrector](https://github.com/MBanucu/gopro-timestamp-corrector).
