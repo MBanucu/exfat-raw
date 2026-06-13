@@ -66,6 +66,9 @@ class ExfatRawIO:
         if bps_shift + spc_shift > 25:
             return None
         spc = 1 << spc_shift
+        ver = struct.unpack_from('<H', data, 0x68)[0]
+        if ver != 0x0100:
+            return None
         return {
             'bytes_per_sector': bps,
             'sec_per_cluster': spc,
