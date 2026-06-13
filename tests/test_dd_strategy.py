@@ -119,9 +119,10 @@ class TestDDStrategyOnLoopDevice(unittest.TestCase):
     """
 
     _loop: str
-    _raw_dev: str
     _mnt: str
     _img: Path
+    _raw_img: Path
+    _raw_dev: str
 
     @classmethod
     def setUpClass(cls):
@@ -131,17 +132,20 @@ class TestDDStrategyOnLoopDevice(unittest.TestCase):
         cached = Path(__file__).parent / 'sdcard.img'
         decompress_sparse_image(gz, cached)
         cls._work = Path(tempfile.mkdtemp(prefix='dd_loop_'))
+
+        # Mounted device
         cls._img = cls._work / 'sdcard.img'
         copy_sparse_image(cached, cls._img)
         cls._loop, cls._mnt = setup_loop_device(str(cls._img))
-        # On macOS the mounted partition device can't be read via sudo dd
-        # (exFAT driver blocks direct I/O).  Derive the parent whole-disk
-        # device for raw-block tests.  On Linux the loop device itself is
-        # already a whole-disk device.
-        if SYSTEM == 'Darwin':
-            cls._raw_dev = re.sub(r's\d+$', '', cls._loop)
-        else:
-            cls._raw_dev = cls._loop
+
+        # Raw (un-mounted) device for sudo dd tests.
+        # macOS exFAT driver blocks direct I/O to mounted devices,
+        # so we use a separate image copy attached via hdiutil -nomount.
+        cls._raw_img = cls._work / 'sdcard_raw.img'
+        copy_sparse_image(cached, cls._raw_img)
+        cls._raw_dev = setup_raw_device(str(cls._raw_img))
+
+        cls.addClassCleanup(teardown_raw_device, cls._raw_dev)
         cls.addClassCleanup(teardown_loop_device, cls._loop, cls._mnt)
         cls.addClassCleanup(shutil.rmtree, cls._work, ignore_errors=True)
 
