@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-06-13
+
+### Added
+- Validate boot sector fields on volume open: reject non-exFAT volumes, enforce valid bytes-per-sector (9–12) and cluster size bounds, and verify the exFAT version field
+
 ### Changed
 - `BackingFileStrategy` (loop-device backing file I/O) now works on macOS, giving macOS the same 3-tier I/O fallback chain as Linux
 
@@ -49,7 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/MBanucu/exfat-raw/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/MBanucu/exfat-raw/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/MBanucu/exfat-raw/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/MBanucu/exfat-raw/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/MBanucu/exfat-raw/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/MBanucu/exfat-raw/compare/v0.1.0...v0.1.1
