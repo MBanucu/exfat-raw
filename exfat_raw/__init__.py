@@ -2,14 +2,12 @@
 
 Layers (one file per layer):
   ``_pure``        — CRC, time encoding/decoding (stateless)
-  ``_resolve``     — Block device / mount point resolution
-  ``_strategies``  — Pluggable I/O strategy base class & helpers
-  ``_direct_io``   — ``DirectIOStrategy``
-  ``_backing_file`` — ``BackingFileStrategy``
-  ``_dd``          — ``DDStrategy``
   ``_io``          — ``ExfatRawIO`` (strategy chain + boot parse)
   ``_fs``          — ``ExfatRawFilesystem`` (FAT, clusters, directory traversal)
   ``_ops``         — ``ExfatRawOps`` (high-level read/write of btime/mtime)
+
+I/O strategies and device resolution are delegated to the
+``rawblock_io`` package.
 
 Singletons
 ==========
@@ -30,7 +28,7 @@ import os
 if os.environ.get('EXFAT_RAW_VERBOSE', '').lower() not in ('', '0', 'false', 'no'):
     logging.basicConfig(level=logging.INFO, format='%(message)s')
 
-from exfat_raw._strategies import IOStrategy, DirectIOStrategy, BackingFileStrategy, DDStrategy
+from rawblock_io import IOStrategy, DirectIOStrategy, BackingFileStrategy, DDStrategy
 from exfat_raw._io import ExfatRawIO
 from exfat_raw._fs import ExfatRawFilesystem
 from exfat_raw._ops import ExfatRawOps

@@ -10,7 +10,7 @@ from exfat_raw._pure import (
     _exfat_entry_set_crc,
     _require_aware,
 )
-from exfat_raw._resolve import resolve_device
+from rawblock_io import resolve_device
 
 logger = logging.getLogger(__name__)
 

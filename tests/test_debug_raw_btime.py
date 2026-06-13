@@ -88,7 +88,7 @@ class DebugRawBtime(unittest.TestCase):
         # Write test pattern at known offset BEFORE any exFAT modifications,
         # so test_05 can verify it on kernels where the exFAT driver remounts
         # read-only after detecting raw block writes (CI's kernel <6.12).
-        from exfat_raw._resolve import resolve_device
+        from rawblock_io import resolve_device
         dev = resolve_device(str(cls._mount_point))
         cls._test_05_offset = 50000 * 512  # ~25 MB, well within pre-allocated sparse file region
         cls._test_05_pattern = b'CLUSTER_WRITE_TEST_99'
@@ -104,7 +104,7 @@ class DebugRawBtime(unittest.TestCase):
         return files[0]
 
     def _resolve_device(self):
-        from exfat_raw._resolve import resolve_device
+        from rawblock_io import resolve_device
         return resolve_device(str(self._mount_point))
 
     @property
