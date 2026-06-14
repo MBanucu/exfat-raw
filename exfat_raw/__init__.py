@@ -6,8 +6,8 @@ Layers (one file per layer):
   ``_fs``          — ``ExfatRawFilesystem`` (FAT, clusters, directory traversal)
   ``_ops``         — ``ExfatRawOps`` (high-level read/write of btime/mtime)
 
-I/O strategies and device resolution are delegated to the
-``rawblock_io`` package.
+I/O strategies are delegated to the ``rawblock_io`` package.
+Device and mount-point resolution is delegated to the ``mount_resolve`` package.
 
 Singletons
 ==========
