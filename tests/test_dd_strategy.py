@@ -159,7 +159,7 @@ class TestDDStrategyOnLoopDevice(unittest.TestCase):
         from datetime import timezone
 
         from exfat_raw import ExfatRawFilesystem, ExfatRawIO
-        from rawblock_io import resolve_device, resolve_mount_point
+        from mount_resolve import resolve_device, resolve_mount_point
 
         file_on_disk = Path(self._mnt) / 'DCIM' / '100GOPRO'
         files = sorted(file_on_disk.glob('*'))

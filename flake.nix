@@ -4,6 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    mount-resolve.url = "github:MBanucu/mount-resolve";
     rawblock-io.url = "github:MBanucu/rawblock-io";
   };
 
@@ -12,6 +13,7 @@
       self,
       nixpkgs,
       flake-utils,
+      mount-resolve,
       rawblock-io,
     }:
     flake-utils.lib.eachDefaultSystem (
@@ -19,7 +21,7 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [ rawblock-io.overlays.default self.overlays.default ];
+          overlays = [ mount-resolve.overlays.default rawblock-io.overlays.default self.overlays.default ];
         };
       in
       {
@@ -44,7 +46,7 @@
       overlays.default = final: prev: {
         exfat-raw = final.python3.pkgs.callPackage ./nix/exfat-raw {
           src = final.lib.cleanSource ./.;
-          inherit (final) rawblock-io;
+          inherit (final) mount-resolve rawblock-io;
         };
       };
     };

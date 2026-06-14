@@ -4,7 +4,7 @@ import struct
 from pathlib import Path
 
 from exfat_raw._pure import _exfat_entry_name
-from rawblock_io import resolve_device, resolve_mount_point
+from mount_resolve import resolve_device, resolve_mount_point
 
 
 class ExfatRawFilesystem:

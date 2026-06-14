@@ -2,6 +2,7 @@
   lib
 , buildPythonPackage
 , setuptools
+, mount-resolve
 , rawblock-io
 , src
 }:
@@ -13,7 +14,7 @@ buildPythonPackage rec {
   inherit src;
 
   nativeBuildInputs = [ setuptools ];
-  propagatedBuildInputs = [ rawblock-io ];
+  propagatedBuildInputs = [ mount-resolve rawblock-io ];
 
   doCheck = true;
   pythonImportsCheck = [ "exfat_raw" ];

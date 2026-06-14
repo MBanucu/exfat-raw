@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Extract raw I/O strategies and platform device/mount resolution into the standalone `rawblock-io` package; `ExfatRawIO` now delegates to `RawBlockIO` via composition.
 - **(Nix flake)** Source `rawblock-io` from flake inputs instead of a hardcoded PyPI hash, removing the need to update hashes on every release.
+- Import `resolve_device` / `resolve_mount_point` directly from `mount-resolve` instead of through `rawblock-io`.
+- **(Nix flake)** Add `mount-resolve` flake input and overlay.
 
 ### Fixed
 - **(Nix flake)** The `rawblock-io` overlay now correctly adds to top-level `pkgs` instead of `python3.pkgs`.
