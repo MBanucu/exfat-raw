@@ -44,7 +44,7 @@
       overlays.default = final: prev: {
         exfat-raw = final.python3.pkgs.callPackage ./nix/exfat-raw {
           src = final.lib.cleanSource ./.;
-          inherit (final.python3.pkgs) rawblock-io;
+          inherit (final) rawblock-io;
         };
       };
     };
